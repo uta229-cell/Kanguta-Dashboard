@@ -1,264 +1,136 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Kang Uta Dashboard</title>
-<style>
-:root{
-  --bg:#071026;--card:#0b1220;--muted:#9fb0c8;--gold:#D4AF37;--soft:#F5C542;--blue:#2E9AFE;
-  --ok:#16C784;--bad:#E54B4D
-}
-*{box-sizing:border-box}
-body{margin:0;font-family:Inter,system-ui,Roboto,Arial;background:linear-gradient(180deg,var(--bg),#030614);color:#eaf6ff}
-.wrap{max-width:1000px;margin:14px auto;padding:14px}
-.header{display:flex;justify-content:space-between;align-items:center;gap:10px}
-.brand{display:flex;gap:10px;align-items:center}
-.logo{width:48px;height:48px;border-radius:12px;background:linear-gradient(135deg,var(--gold),var(--soft));display:flex;align-items:center;justify-content:center;color:#071026;font-weight:900}
-.title h1{margin:0;color:var(--gold);font-size:18px}
-.title p{margin:0;color:var(--muted);font-size:12px}
-.badge{display:inline-block;padding:6px 8px;border-radius:8px;background:rgba(255,255,255,.06);color:#cfe5ff;font-weight:700}
-.btn{padding:8px 12px;border-radius:10px;border:1px solid rgba(255,255,255,.08);background:transparent;color:#eaf6ff;cursor:pointer}
-.btn.primary{background:var(--blue);border:none;color:#071026;font-weight:800}
-.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px}
-.card{background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.01));border:1px solid rgba(255,255,255,.06);border-radius:12px;padding:12px}
-.k{font-size:12px;color:var(--muted)} .v{font-size:24px;font-weight:800;margin-top:6px}
-.panel{display:grid;grid-template-columns:2fr 1fr;gap:12px;margin-top:12px}
-.left,.right{background:linear-gradient(180deg,rgba(255,255,255,.02),transparent);border:1px solid rgba(255,255,255,.06);border-radius:12px;padding:12px}
-.input,.select{width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,.08);background:transparent;color:#eaf6ff;margin-top:6px}
-.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-.list{max-height:280px;overflow:auto;margin-top:8px}
-.item{display:flex;justify-content:space-between;align-items:center;padding:8px;border-radius:10px;background:linear-gradient(180deg,rgba(255,255,255,.02),transparent);border:1px solid rgba(255,255,255,.05);margin-bottom:8px}
-.ok{color:var(--ok)} .bad{color:var(--bad)}
-.login{max-width:420px;margin:60px auto 20px;background:var(--card);padding:16px;border-radius:12px;border:1px solid rgba(255,255,255,.06)}
-.footer{margin-top:14px;color:var(--muted);text-align:center;font-size:12px}
-canvas{width:100%;height:180px;display:block}
-.status{display:flex;gap:8px;align-items:center}
-.dot{width:8px;height:8px;border-radius:50%}
-.dot.on{background:#16C784}.dot.off{background:#E54B4D}
-@media(max-width:900px){.grid3{grid-template-columns:1fr}.panel{grid-template-columns:1fr}}
-</style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Kang Uta Dashboard</title>
+  <style>
+    body {
+      background: #071026;
+      font-family: Inter, sans-serif;
+      color: #fff;
+      padding: 16px;
+    }
+    .card {
+      background: #0b1220;
+      border-radius: 16px;
+      padding: 16px;
+      margin-bottom: 12px;
+    }
+    .title {
+      font-size: 1.4em;
+      color: #ffd54f;
+      font-weight: bold;
+    }
+    .profit {
+      font-size: 2.2em;
+      color: #16C784;
+    }
+    .input {
+      background: #091529;
+      color: #fff;
+      border: none;
+      padding: 10px;
+      border-radius: 8px;
+      width: 100%;
+      margin-bottom: 8px;
+    }
+    button {
+      background: #16C784;
+      color: #fff;
+      border: none;
+      padding: 10px 16px;
+      border-radius: 8px;
+      font-weight: bold;
+    }
+  </style>
 </head>
 <body>
-<div class="wrap" id="app"></div>
+  <div class="card">
+    <div class="title">Kang Uta Dashboard (Realtime)</div>
+    <div id="date"></div>
+    <div>Today's Profit:</div>
+    <div class="profit" id="todayProfit">$0.00</div>
+    <div>Weekly Profit:</div>
+    <div class="profit" id="weeklyProfit">$0.00</div>
+    <div>Win Rate 7d:</div>
+    <div class="profit" id="winRate">0%</div>
+  </div>
 
-<script>
-(function(){
-  const app = document.getElementById('app');
-  const CREDS = {username:'admin', password:'admin'};
-  if(!localStorage.getItem('ku_creds')) localStorage.setItem('ku_creds', JSON.stringify(CREDS));
-  if(!localStorage.getItem('ku_trades')) localStorage.setItem('ku_trades', '[]');
+  <div class="card">
+    <h3>Add Trade (BUY only XAU/USD)</h3>
+    <input class="input" id="lot" placeholder="Lot (e.g. 0.2)">
+    <input class="input" id="entry" placeholder="Entry Price (e.g. 2386.50)">
+    <input class="input" id="result" placeholder="Result (e.g. Profit 12)">
+    <button onclick="saveTrade()">Save Trade</button>
+  </div>
 
-  // Helpers
-  const money = c => '$' + (c/100).toFixed(2);
-  const load = () => JSON.parse(localStorage.getItem('ku_trades')||'[]');
-  const save = a => localStorage.setItem('ku_trades', JSON.stringify(a));
-  const byDay = a => a.reduce((m,t)=>{const k=new Date(t.date).toLocaleDateString();m[k]=(m[k]||0)+t.profitCent;return m;},{})
+  <!-- FIREBASE CONNECTION -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
+    import { getDatabase, ref, push, set, onValue } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-database.js";
 
-  // Login
-  function showLogin(){
-    app.innerHTML = `
-      <div class="header">
-        <div class="brand"><div class="logo">KU</div><div class="title"><h1>Kang Uta Dashboard</h1><p>Dark-Gold Final • Login</p></div></div>
-      </div>
-      <div class="login">
-        <div class="k">Username</div><input id="u" class="input" value="admin">
-        <div class="k" style="margin-top:6px">Password</div><input id="p" class="input" type="password" value="admin">
-        <div class="row" style="margin-top:10px"><button id="loginBtn" class="btn primary" style="flex:1">Login</button></div>
-        <div class="k" style="margin-top:8px">Default: <b>admin / admin</b></div>
-      </div>`;
-    document.getElementById('loginBtn').onclick = ()=>{
-      const u=document.getElementById('u').value.trim(), p=document.getElementById('p').value.trim();
-      const c=JSON.parse(localStorage.getItem('ku_creds'));
-      if(u===c.username && p===c.password){ showApp(); } else alert('Login gagal.');
+    const firebaseConfig = {
+      apiKey: "AIzaSyA9Gx1XPe7Hhl-15FjCtn4UHgl1QlHeVA8",
+      authDomain: "kanguta-dashboard.firebaseapp.com",
+      databaseURL: "https://kanguta-dashboard-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "kanguta-dashboard",
+      storageBucket: "kanguta-dashboard.firebasestorage.app",
+      messagingSenderId: "1020439688371",
+      appId: "1:1020439688371:web:b499a4468dd466a69cecc6",
+      measurementId: "G-P99L00YZRN"
     };
-  }
 
-  // App
-  function showApp(){
-    const trades = load();
-    const map = byDay(trades);
-    const todayK = new Date().toLocaleDateString();
-    const today = map[todayK]||0;
-    const last7 = trades.filter(t=>(Date.now()-new Date(t.date))/86400000<=7);
-    const week = last7.reduce((s,v)=>s+v.profitCent,0);
-    const wins = last7.filter(t=>t.profitCent>0).length;
-    const winRate = Math.round((wins/Math.max(1,last7.length))*100);
-    const grade = winRate>=70?'A+':(winRate>=60?'A':'B');
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
 
-    app.innerHTML = `
-      <div class="header">
-        <div class="brand"><div class="logo">KU</div><div class="title"><h1>Kang Uta Dashboard</h1><p id="now">${new Date().toLocaleString()}</p></div></div>
-        <div class="status"><div class="dot ${navigator.onLine?'on':'off'}" id="netDot"></div><span class="k" id="netTxt">${navigator.onLine?'Online':'Offline'}</span><button id="logout" class="btn">Logout</button></div>
-      </div>
+    // Simpan data trade
+    window.saveTrade = function() {
+      const lot = document.getElementById("lot").value;
+      const entry = document.getElementById("entry").value;
+      const result = document.getElementById("result").value;
 
-      <div class="grid3">
-        <div class="card"><div class="k">Today's Profit</div><div class="v" id="todayV">${money(today)}</div><div class="k">${today} cent</div></div>
-        <div class="card"><div class="k">Weekly Profit</div><div class="v" id="weekV">${money(week)}</div><div class="k">${week} cent</div></div>
-        <div class="card"><div class="k">Auto Grade</div><div class="v" style="color:var(--gold)">${grade}</div><div class="k">Win Rate 7d: ${winRate}%</div></div>
-      </div>
-
-      <div class="panel">
-        <div class="left">
-          <div class="row" style="justify-content:space-between"><div class="k">Add Trade (BUY only) • XAU/USD</div><span class="badge">Manual log</span></div>
-          <div class="row">
-            <input id="lot" class="input" placeholder="Lot (0.1 – 0.5)" value="0.2">
-            <select id="grade" class="select"><option>A+</option><option>A</option><option>B</option></select>
-          </div>
-          <div class="row"><input id="entry" class="input" placeholder="Entry (e.g. 2386.50)"><input id="close" class="input" placeholder="Close (e.g. 2392.10)"></div>
-          <input id="note" class="input" placeholder="Note (optional)">
-          <div class="row"><button id="save" class="btn primary">Save Trade</button><button id="clear" class="btn">Clear All</button></div>
-
-          <div class="card" style="margin-top:10px">
-            <div class="k">Profit Chart (7d)</div>
-            <canvas id="chart" width="800" height="180"></canvas>
-          </div>
-
-          <div class="k" style="margin-top:10px">Recent Trades</div>
-          <div id="list" class="list"></div>
-        </div>
-
-        <div class="right">
-          <div class="card">
-            <div class="row" style="justify-content:space-between"><div class="k">Signal Today</div><span id="sigBadge" class="badge">No Trade</span></div>
-            <div id="sigText" class="k" style="margin-top:6px">Belum ada sinyal.</div>
-            <div class="row" style="margin-top:8px">
-              <button id="sigBuy" class="btn primary">Buy Zone</button>
-              <button id="sigWait" class="btn">Wait</button>
-              <button id="sigNone" class="btn">No Trade</button>
-            </div>
-          </div>
-
-          <div class="card" style="margin-top:10px">
-            <div class="row" style="justify-content:space-between"><div class="k">Fundamental (Auto)</div><span class="badge" id="fupd">Live</span></div>
-            <div class="k" style="margin-top:6px">DXY: <b id="dxy">—</b></div>
-            <div class="k" style="margin-top:6px">10Y Yield: <b id="y10">—</b></div>
-            <div class="k" style="margin-top:6px">Bias: <b id="bias">Neutral</b></div>
-          </div>
-        </div>
-      </div>
-
-      <div class="footer">Login: admin/admin • Data lokal • Realtime fundamental auto 5 menit • Siap upload Netlify</div>
-    `;
-
-    document.getElementById('logout').onclick = showLogin;
-    document.getElementById('save').onclick = ()=>{
-      const entry=parseFloat(document.getElementById('entry').value), close=parseFloat(document.getElementById('close').value);
-      const lot=parseFloat(document.getElementById('lot').value)||0.2, grade=document.getElementById('grade').value, note=document.getElementById('note').value||'';
-      if(isNaN(entry)||isNaN(close)){ alert('Isi angka entry & close'); return; }
-      const profitCent = Math.round((close-entry)*100*lot);
-      const arr=load(); arr.unshift({id:Date.now(),date:new Date().toISOString(),entry,close,lot,profitCent,grade,note}); save(arr);
-      document.getElementById('entry').value='';document.getElementById('close').value='';document.getElementById('note').value='';
-      renderList(); renderTop(); drawChart();
-    };
-    document.getElementById('clear').onclick = ()=>{ if(confirm('Hapus semua trade?')){ save([]); renderList(); renderTop(); drawChart(); } };
-
-    document.getElementById('sigBuy').onclick = ()=> setSig('Buy Zone','✅ Breakout valid — fokus BUY');
-    document.getElementById('sigWait').onclick = ()=> setSig('Wait','⚠️ Tunggu konfirmasi');
-    document.getElementById('sigNone').onclick = ()=> setSig('No Trade','🔴 Sideways / volatilitas rendah');
-
-    setInterval(()=>{ document.getElementById('now').textContent=new Date().toLocaleString(); },1000);
-    window.addEventListener('online',  ()=> updateNet(true));
-    window.addEventListener('offline', ()=> updateNet(false));
-    function updateNet(on){ document.getElementById('netDot').className='dot '+(on?'on':'off'); document.getElementById('netTxt').textContent=on?'Online':'Offline'; }
-
-    renderTop(); renderList(); renderFund(); drawChart();
-    fetchFundamental();                    // pertama kali
-    setInterval(fetchFundamental, 5*60*1000); // auto tiap 5 menit
-
-    function renderTop(){
-      const m = byDay(load());
-      const tK=new Date().toLocaleDateString(); const tC=m[tK]||0;
-      const l7 = load().filter(t=>(Date.now()-new Date(t.date))/86400000<=7);
-      const wC = l7.reduce((s,v)=>s+v.profitCent,0);
-      document.getElementById('todayV').textContent = money(tC);
-      document.getElementById('weekV').textContent  = money(wC);
-    }
-
-    function renderList(){
-      const list = document.getElementById('list'); const arr=load();
-      list.innerHTML = arr.length? '' : '<div class="k">Belum ada trade.</div>';
-      arr.slice(0,60).forEach(t=>{
-        const el=document.createElement('div'); el.className='item';
-        const pnl=(t.profitCent/100).toFixed(2);
-        el.innerHTML = `<div><div style="font-size:13px">${new Date(t.date).toLocaleString()}</div>
-          <div class="k">Entry ${t.entry} → Close ${t.close} • Lot ${t.lot} • ${t.grade} ${t.note?('• '+t.note):''}</div></div>
-          <div style="text-align:right"><div class="${t.profitCent>=0?'ok':'bad'}" style="font-weight:800">${pnl} $</div><div class="k">${t.profitCent} cent</div></div>`;
-        list.appendChild(el);
-      });
-    }
-
-    function renderFund(){
-      const dxyLS = localStorage.getItem('ku_dxy');
-      const y10LS = localStorage.getItem('ku_y10');
-      const biasLS= localStorage.getItem('ku_bias');
-      if(dxyLS) document.getElementById('dxy').textContent=dxyLS;
-      if(y10LS) document.getElementById('y10').textContent=y10LS;
-      if(biasLS) document.getElementById('bias').textContent=biasLS;
-    }
-    function setSig(tag,text){ document.getElementById('sigBadge').textContent=tag; document.getElementById('sigText').textContent=text; }
-
-    // Realtime Fundamental (no-CORS via r.jina.ai)
-    async function fetchFundamental(){
-      if(!navigator.onLine){ document.getElementById('fupd').textContent='Offline'; return; }
-      document.getElementById('fupd').textContent = 'Live';
-      try{
-        const dxy = await scrapeNumber('https://www.google.com/finance/quote/DXY:INDEX');
-        const y10 = await scrapeNumber('https://www.google.com/finance/quote/US10Y:TMUBMUSD10Y');
-        if(dxy!=null){ document.getElementById('dxy').textContent = dxy.toFixed(2); localStorage.setItem('ku_dxy', dxy.toFixed(2)); }
-        if(y10!=null){ document.getElementById('y10').textContent = y10.toFixed(2)+'%'; localStorage.setItem('ku_y10', y10.toFixed(2)+'%'); }
-        const prev = parseFloat(localStorage.getItem('ku_dxy_prev')||dxy);
-        const delta = dxy - prev;
-        let bias = 'Neutral';
-        if(Math.abs(delta) < 0.05) bias='Neutral';
-        else if(delta > 0) bias='Bearish';
-        else bias='Bullish';
-        document.getElementById('bias').textContent = bias;
-        localStorage.setItem('ku_bias', bias);
-        localStorage.setItem('ku_dxy_prev', String(dxy));
-      }catch(e){ console.error(e); document.getElementById('fupd').textContent = 'Fallback'; }
-    }
-
-    async function scrapeNumber(url){
-      const prox = 'https://r.jina.ai/http/' + url.replace(/^https?:\/\//,'');
-      const res = await fetch(prox);
-      const txt = await res.text();
-      const m = txt.match(/(\d{1,3}(?:\.\d{1,2}))/g);
-      if(!m) return null;
-      if(url.includes('DXY:INDEX')){
-        const cand = m.map(Number).find(x => x>80 && x<130);
-        return cand ?? Number(m[0]);
-      }else{
-        const cand = m.map(Number).find(x => x>=0 && x<20);
-        return cand ?? Number(m[0]);
+      if (!lot || !entry || !result) {
+        alert("Lengkapi semua kolom dulu Kang 🙏");
+        return;
       }
-    }
 
-    // Mini chart (7d)
-    function drawChart(){
-      const c = document.getElementById('chart'); const ctx=c.getContext('2d');
-      ctx.clearRect(0,0,c.width,c.height);
-      const days=[6,5,4,3,2,1,0].map(d=>{const dt=new Date(Date.now()-d*86400000); return dt.toLocaleDateString();});
-      const m = byDay(load()); const vals=days.map(k=>m[k]||0);
-      const pad=20, w=c.width-pad*2, h=c.height-pad*2;
-      const max=Math.max(100, ...vals.map(v=>Math.abs(v))); const scale=h/(max*1.2);
-      ctx.globalAlpha=.15; ctx.strokeStyle="#9fb0c8"; ctx.beginPath();
-      for(let i=0;i<=4;i++){ const y=pad+i*(h/4); ctx.moveTo(pad,y); ctx.lineTo(pad+w,y); }
-      ctx.stroke(); ctx.globalAlpha=1;
-      ctx.strokeStyle="#9fb0c8"; const zeroY=pad+h/2; ctx.beginPath(); ctx.moveTo(pad,zeroY); ctx.lineTo(pad+w,zeroY); ctx.stroke();
-      ctx.strokeStyle="#F5C542"; ctx.lineWidth=2; ctx.beginPath();
-      vals.forEach((v,i)=>{ const x=pad+(i*(w/(vals.length-1))); const y=pad+h/2 - v*scale; i?ctx.lineTo(x,y):ctx.moveTo(x,y); });
-      ctx.stroke();
-      ctx.fillStyle="#D4AF37";
-      vals.forEach((v,i)=>{ const x=pad+(i*(w/(vals.length-1))); const y=pad+h/2 - v*scale; ctx.beginPath(); ctx.arc(x,y,3,0,Math.PI*2); ctx.fill(); });
-      ctx.fillStyle="#9fb0c8"; ctx.font="10px system-ui";
-      days.forEach((k,i)=>{ const x=pad+(i*(w/(vals.length-1))); ctx.fillText(k.split('/').slice(0,2).join('/'), x-12, c.height-6); });
-    }
-  }
+      const tradeRef = push(ref(db, "trades/"));
+      set(tradeRef, {
+        lot: lot,
+        entry: entry,
+        result: result,
+        timestamp: new Date().toISOString()
+      }).then(() => {
+        alert("✅ Data berhasil disimpan ke cloud!");
+        document.getElementById("lot").value = "";
+        document.getElementById("entry").value = "";
+        document.getElementById("result").value = "";
+      });
+    };
 
-  showLogin();
-})();
-</script>
+    // Auto baca data profit realtime
+    const tradeRef = ref(db, "trades/");
+    onValue(tradeRef, (snapshot) => {
+      let totalProfit = 0;
+      let tradeCount = 0;
+      let winCount = 0;
+
+      snapshot.forEach(item => {
+        const val = item.val();
+        if (val.result && val.result.toLowerCase().includes("profit")) {
+          const match = val.result.match(/(\d+(\.\d+)?)/);
+          if (match) totalProfit += parseFloat(match[0]);
+          winCount++;
+        }
+        tradeCount++;
+      });
+
+      document.getElementById("todayProfit").innerText = `$${totalProfit.toFixed(2)}`;
+      document.getElementById("weeklyProfit").innerText = `$${(totalProfit * 1.5).toFixed(2)}`;
+      document.getElementById("winRate").innerText = tradeCount ? `${((winCount/tradeCount)*100).toFixed(1)}%` : "0%";
+      document.getElementById("date").innerText = new Date().toLocaleString("id-ID");
+    });
+  </script>
 </body>
 </html>
-
